@@ -1,0 +1,1238 @@
+# AGRIFLOW —  HACKATHON MVP
+
+We have only 3 days to build the MVP.
+Do NOT over-engineer the project.
+The priority is:
+
+Build ONE complete, polished, working agricultural marketplace platform from frontend to backend to database.
+
+The platform has three user roles:
+
+1. FARMER (individual, or member of an FPO — see §11a)
+2. BUYER / MARKET
+3. LOGISTICS PROVIDER
+
+All three users should use the web application for the MVP.
+Do NOT implement voice, IVR, WhatsApp, mobile apps or other farmer-access mechanisms yet.
+However, keep the backend architecture extensible so these can be added later.
+
+ CORE PRODUCT
+
+The platform connects:
+
+FARMER
+   ↓
+Agricultural Supply
+   ↓
+AI TRADE ENGINE
+   ↑
+Agricultural Demand
+   ↑
+BUYER / MARKET
+
+LOGISTICS PROVIDER
+   ↓
+Shared transportation
+   ↓
+Optimized route
+
+
+The main innovation is:
+The system does not optimize only for selling price. It finds the best transaction considering price, transport cost, quantity, distance, shelf life and buyer requirements.
+
+The platform should produce a:
+
+# BEST TRADE
+
+for each farmer/buyer combination.
+
+
+KEEP THE AI SIMPLE
+
+We only need TWO intelligent components for the MVP.
+
+## AI COMPONENT 1 — PRICE / TRADE ENGINE
+
+Use one ML service/interface.
+
+Potential future model:
+
+```text
+LightGBM
+```
+
+But the trained model is NOT available yet.
+
+Therefore implement:
+
+```text
+MockPriceTradeService
+```
+
+now.
+
+Later it will be replaced by:
+
+```text
+LightGBMPriceTradeService
+```
+
+without changing the frontend or business logic.
+
+The service should support:
+
+```text
+predict_price()
+calculate_match_score()
+calculate_best_trade()
+```
+
+Do not create separate ML models for price, demand, matching and freshness.
+
+For this MVP they should be handled by one service + deterministic calculations.
+
+---
+
+# 4. AI COMPONENT 2 — LOGISTICS
+
+Use:
+
+Google OR-Tools
+for vehicle routing / shared transportation.
+
+
+5. SHELF LIFE
+
+Do NOT train a shelf-life model.
+
+Use a simple rule-based system.
+
+Each crop has a default shelf life.
+
+Example:
+
+```text
+Tomato → 5 days
+Onion → 30 days
+Potato → 60 days
+Banana → 7 days
+Cabbage → 14 days
+```
+
+Calculate:
+
+```text
+remaining_shelf_life =
+default_shelf_life - days_since_harvest - estimated_transport_time
+```
+
+Generate:
+
+```text
+freshness_score
+```
+
+from the remaining shelf life.
+
+Keep this in a separate:
+
+```text
+FreshnessService
+```
+
+so an ML model can replace it later.
+
+---
+
+# 6. DEMAND
+
+Do NOT build a demand forecasting ML model.
+
+Demand for the MVP comes directly from buyer requirements.
+
+Example:
+
+```text
+Buyer A
+Tomato
+2,000 kg
+Required by tomorrow
+Maximum price ₹38/kg
+```
+
+Aggregate all active buyer requirements to calculate:
+
+```text
+current demand
+```
+
+Display:
+
+```text
+Supply
+Demand
+Supply gap
+```
+
+Later a forecasting model can be added.
+
+---
+
+# 7. NET REALIZATION
+
+This is a core business calculation.
+
+For a farmer:
+
+```text
+Net Realization =
+Sale Value
+- Transport Cost
+- Handling Cost
+- Expected Spoilage Cost
+```
+
+Example:
+
+```text
+Sale price       ₹38/kg
+Transport        ₹1.5/kg
+Handling         ₹0.5/kg
+Spoilage          ₹1/kg
+-------------------------
+Net realization  ₹35/kg
+```
+
+The platform should optimize for this number.
+
+---
+
+# 8. BEST TRADE ENGINE
+
+Create:
+
+```text
+BestTradeService
+```
+
+It should evaluate:
+
+```text
+farmer
+buyer
+crop
+quantity
+price
+distance
+transport cost
+shelf life
+delivery deadline
+quality
+```
+
+For each possible farmer-buyer pair calculate:
+
+```text
+sale_value
+transport_cost
+handling_cost
+estimated_spoilage
+net_farmer_realization
+buyer_landed_cost
+```
+
+Then rank the options.
+
+Example:
+
+```text
+BEST TRADE
+
+Farmer:
+Ravi
+
+Produce:
+800 kg Tomato
+
+Buyer:
+Bengaluru Retailer
+
+Sale price:
+₹37/kg
+
+Transport:
+₹1.3/kg
+
+Expected spoilage:
+₹0.6/kg
+
+Net farmer realization:
+₹35.1/kg
+
+Delivery:
+Same day
+
+Freshness:
+88%
+
+Confidence:
+91%
+```
+
+
+# 9. PRICE RECOMMENDATION
+
+The farmer enters:
+
+```text
+Expected price:
+₹35/kg
+```
+
+The system displays:
+
+```text
+Your expected price:
+₹35/kg
+
+AI recommended:
+₹36.5/kg
+
+Recommended range:
+₹35–38/kg
+```
+
+For now use mock model predictions.
+
+The frontend must NOT know that the result is mocked.
+
+Ground the mock, don't fabricate it: seed `MockPriceTradeService` with a static
+snapshot of real public mandi price data (Agmarknet / data.gov.in) for the 5 seed
+crops in Karnataka/Bengaluru-region markets, and derive recommended price + range as
+that baseline ± a small model-like variance. This makes every number in the demo
+defensible ("where does this come from?") without any live integration risk — it's a
+one-time reference dataset, not a new service.
+
+---
+
+# 10. BUYER SIDE
+
+Buyer can create requirements:
+
+```text
+Crop
+Quantity
+Maximum price
+Quality
+Required delivery date
+Delivery location
+```
+
+Example:
+
+```text
+Tomato
+2 tonnes
+Maximum ₹38/kg
+Grade A
+Within 24 hours
+Bengaluru
+```
+
+The system finds matching farmer supply.
+
+---
+
+# 11. DYNAMIC FARMER AGGREGATION
+
+This is important.
+
+If buyer requires:
+
+```text
+2,000 kg
+```
+
+and farmers have:
+
+```text
+Farmer A → 800 kg
+Farmer B → 500 kg
+Farmer C → 700 kg
+```
+
+the system should create:
+
+```text
+Virtual Supply Lot
+
+A → 800kg
+B → 500kg
+C → 700kg
+
+TOTAL → 2,000kg
+```
+
+The buyer sees this as one procurement plan.
+
+The database must maintain the relationship between:
+
+```text
+Virtual Lot
+→ Farmer contributions
+→ Buyer requirement
+→ Logistics
+→ Transaction
+```
+
+---
+
+# 11a. FPO (FARMER PRODUCER ORGANIZATION)
+
+The official problem statement explicitly says "farmers/FPOs" — the platform must
+support FPOs, not just individual farmers.
+
+An FPO is modeled as a farmer-aggregator account:
+
+```text
+fpo_profiles
+    → many farmer_profiles (via optional fpo_id on farmer_profiles)
+```
+
+FPO account gets:
+
+```text
+Same dashboard as an individual farmer
++
+Roll-up view of all member farmers' listings, offers and earnings
+```
+
+This requires no new matching/aggregation logic — an FPO's member farmers already look
+like "multiple farmers contributing to one Virtual Supply Lot" (§11), so the existing
+aggregation engine handles FPOs for free.
+
+Seed data (§26) should include 2–3 demo FPOs grouping a subset of the 50 farmers.
+
+---
+
+# 12. LOGISTICS PROVIDER
+
+Transport companies can register vehicles.
+
+Vehicle:
+
+```text
+vehicle type
+capacity
+current location
+available time
+cost per km
+```
+
+Example:
+
+```text
+Tata Ace
+Capacity: 1,500kg
+Current location: Ramanagara
+Cost: ₹20/km
+```
+
+---
+
+# 13. SHARED LOGISTICS
+
+This is one of the key features.
+
+Example:
+
+```text
+Farmer A → 500kg
+Farmer B → 600kg
+Farmer C → 300kg
+
+Truck capacity → 1,500kg
+```
+
+The system should combine these into one route.
+
+Instead of:
+
+```text
+3 separate trucks
+```
+
+show:
+
+```text
+1 shared truck
+3 pickups
+1 buyer
+```
+
+Calculate estimated savings.
+
+Example:
+
+```text
+Traditional logistics:
+₹7,800
+
+Optimized shared logistics:
+₹5,600
+
+Estimated saving:
+28%
+```
+
+Clearly label demo/simulated figures where appropriate.
+
+---
+
+# 14. LOGISTICS OPTIMIZATION
+
+Create:
+
+```text
+LogisticsService
+```
+
+Interface:
+
+```text
+optimize_route(
+    pickup_locations,
+    pickup_quantities,
+    vehicle_capacity,
+    buyer_location,
+    delivery_deadline
+)
+```
+
+implementation should use:
+
+```text
+Google OR-Tools
+```
+
+Optimize:
+
+```text
+distance
+transport cost
+vehicle capacity
+delivery deadline
+```
+
+
+---
+
+# 15. ROUTE RESULT
+
+Return:
+
+```text
+route
+stops
+distance
+duration
+transport_cost
+vehicle_utilization
+estimated_savings
+```
+
+Display the route visually on a map (optional).
+
+
+# 16. BACKHAUL
+
+Implement the database structure and basic UI for return loads.
+
+Example:
+Truck:
+Mysore → Bengaluru
+Return opportunity:
+Bengaluru → Mysore
+
+
+If a suitable load exists, show:
+RETURN LOAD AVAILABLE
+
+Additional earnings:
+₹2,800
+This does not need sophisticated optimization in the first MVP.
+
+
+# 17. FARMER DASHBOARD
+
+My Produce
+Active Listings
+AI Price
+Buyer Offers
+Best Trade
+Orders
+Expected Earnings
+Transport Status
+
+
+The main CTA should be:
+
+# ADD PRODUCE
+
+# 18. ADD PRODUCE
+
+Form:
+
+```text
+Crop
+Variety
+Quantity
+Unit
+Location
+Harvest Date
+Shelf Life
+Quality
+Expected Price
+Available From
+Available Until
+Images (optional)
+```
+
+After submission:
+
+```text
+AI Price Recommendation
+```
+
+should automatically appear.
+
+---
+
+# 19. FARMER BEST TRADE
+
+Every active listing should have:
+
+```text
+BEST TRADE
+```
+
+Example:
+
+```text
+Tomato — 800kg
+
+Best Buyer:
+Bengaluru Retail Market
+
+Price:
+₹37/kg
+
+Transport:
+₹1.3/kg
+
+Expected spoilage:
+₹0.6/kg
+
+Net realization:
+₹35.1/kg
+
+Delivery:
+Same day
+
+Freshness:
+88%
+
+WHY?
+
+✓ High net realization
+✓ Short distance
+✓ Buyer demand confirmed
+✓ Low spoilage risk
+```
+
+---
+
+# 20. BUYER DASHBOARD
+
+Show:
+
+```text
+My Requirements
+Recommended Supply
+Procurement Plans
+Orders
+Expected Landed Cost
+Delivery Tracking
+```
+
+Main CTA:
+
+# POST REQUIREMENT
+
+---
+
+# 21. BUYER PROCUREMENT PLAN
+
+Example:
+
+```text
+Requirement:
+2,000kg Tomato
+
+Recommended supply:
+
+Farmer A   800kg
+Farmer B   500kg
+Farmer C   700kg
+
+Total:
+2,000kg
+
+Product cost:
+₹74,000
+
+Transport:
+₹5,600
+
+Expected landed cost:
+₹79,600
+```
+
+---
+
+# 22. LOGISTICS DASHBOARD
+
+Show:
+
+```text
+Available Vehicles
+Available Loads
+Recommended Shared Loads
+Active Routes
+Return Loads
+Earnings
+```
+
+Main CTA:
+
+# FIND LOAD
+
+---
+
+# 23. SUPPLY-DEMAND DASHBOARD
+
+Create a simple visualization.
+
+For each crop:
+
+```text
+Tomato
+
+Current Supply:
+12.4 tonnes
+
+Current Demand:
+15.8 tonnes
+
+Gap:
+-3.4 tonnes
+
+Status:
+SHORTAGE
+```
+
+Also show:
+
+```text
+Onion
+Supply > Demand
+SURPLUS
+```
+
+This is derived from current listings and buyer requirements.
+
+No forecasting model required.
+
+---
+
+# 24. MARKET MAP
+
+Create a map showing:
+
+* farmer locations
+* buyer locations
+* logistics providers
+* supply clusters
+* demand clusters
+
+The map should be useful, not decorative.
+
+---
+
+# 25. DATABASE
+
+Use PostgreSQL locally.
+
+Use Docker.
+
+Create proper relational tables:
+
+```text
+users
+farmer_profiles
+fpo_profiles
+buyer_profiles
+logistics_profiles
+
+produce_listings
+produce_images
+
+buyer_requirements
+
+offers
+transactions
+
+virtual_supply_lots
+virtual_supply_lot_items
+
+vehicles
+transport_requests
+routes
+route_stops
+
+market_prices
+
+ai_recommendations
+
+notifications
+```
+
+Use foreign keys.
+
+Use timestamps.
+
+Use proper indexes.
+
+Use PostGIS if practical for location queries.
+
+---
+
+# 26. SEED DATA
+
+Create realistic demo data.
+
+At least:
+
+```text
+50 farmers
+20 buyers
+10 logistics providers
+20 vehicles
+10 villages
+5 crops
+```
+
+Crops:
+
+```text
+Tomato
+Onion
+Potato
+Banana
+Cabbage
+```
+
+Use Karnataka/Bengaluru-region style locations.
+The system must look populated immediately after setup.
+
+Group a subset of the 50 farmers under 2-3 demo FPOs (§11a).
+
+Seed mandi price baselines for the 5 crops from real Agmarknet/data.gov.in snapshots
+(§9) instead of arbitrary numbers.
+
+# 28. FUTURE MODEL API CONTRACT
+
+Keep these endpoints ready:
+
+```text
+POST /ai/price/predict
+POST /ai/trade/score
+POST /ai/logistics/optimize
+POST /ai/freshness/predict
+```
+
+For now these should use local mock services.
+
+The actual trained models will be plugged in later.
+
+
+# 29. IMPORTANT — DO NOT CREATE TOO MANY SERVICES
+
+For the 4-day MVP, do NOT create:
+
+* demand AI model
+* separate matching AI model
+* separate spoilage AI model
+* separate negotiation AI model
+* separate forecasting AI model
+* reinforcement learning
+* computer vision
+* complicated multi-agent AI
+
+These are future enhancements.
+
+Focus on the complete workflow.
+
+---
+
+# 30. FRONTEND ARCHITECTURE
+
+Build one unified web application.
+
+Do NOT build separate applications for farmers, buyers and logistics.
+
+Use role-based dashboards inside the same application.
+
+Example:
+
+```text
+/app
+    /dashboard
+    /farmer
+    /buyer
+    /logistics
+    /produce
+    /requirements
+    /orders
+    /routes
+    /admin
+```
+
+---
+
+# 31. WEBSITE TEMPLATE
+
+A separate website/UI template zip is already in the foler.
+
+IMPORTANT:
+
+When the template is provided:
+
+* Use the template as the visual source of truth.
+* Preserve its theme.
+* Preserve typography.
+* Preserve spacing.
+* Preserve colors.
+* Preserve component style.
+* Preserve navigation.
+* Reuse its components wherever possible.
+* Do not redesign the visual language.
+
+Integrate the application functionality into the template. And give it agriculture feel.
+
+Do not replace the template with a generic dashboard theme.
+
+---
+
+# 32. UX
+
+The platform should be extremely simple.
+
+Avoid unnecessary forms.
+
+Use:
+
+* cards
+* tables
+* clear status indicators
+* maps
+* charts
+* progress indicators
+* obvious CTAs
+
+Farmers should be able to create a listing quickly.
+
+Buyers should be able to create a requirement quickly.
+
+Transporters should immediately see available loads.
+
+---
+
+# 33. IMPORTANT PRODUCT PRINCIPLE
+
+The platform should always show economic consequences.
+
+Do not just show:
+
+```text
+Price = ₹38
+```
+
+Show:
+
+```text
+Sale price = ₹38
+
+Transport = ₹1.3
+Spoilage = ₹0.6
+
+Farmer net = ₹36.1
+```
+
+For buyers show:
+
+```text
+Product price
++
+Transport
++
+Handling
+=
+Landed cost
+```
+
+This is central to the product.
+
+---
+
+# 34. TRANSACTION FLOW
+
+The complete system must support:
+
+```text
+Farmer
+ ↓
+Create produce
+ ↓
+AI price recommendation
+ ↓
+Buyer creates requirement
+ ↓
+System finds matching supply
+ ↓
+Aggregate multiple farmers if necessary
+ ↓
+Find logistics
+ ↓
+Create shared route
+ ↓
+Calculate transport cost
+ ↓
+Calculate freshness
+ ↓
+Calculate net realization
+ ↓
+BEST TRADE
+ ↓
+Farmer accepts
+ ↓
+Buyer confirms
+ ↓
+Transporter accepts
+ ↓
+Delivery
+ ↓
+Transaction completed
+```
+
+This complete flow is the most important part of the MVP.
+
+---
+
+# 35. ADMIN
+
+Create a simple admin dashboard showing:
+
+```text
+Total Farmers
+Total Buyers
+Total Logistics Providers
+
+Active Produce
+Active Demand
+
+Active Transactions
+
+Total Produce Volume
+Total Transaction Value
+
+Estimated Logistics Savings
+```
+
+Also add impact/sustainability tiles derived from data already computed elsewhere
+(no new models needed):
+
+```text
+Total middleman margin saved (mandi baseline price vs. net realization)
+Spoilage avoided (from freshness/shelf-life calc, §5)
+Vehicle utilization / empty-capacity reduction (from route result, §15)
+```
+
+Also show a map.
+
+---
+
+# 36. DEMO MODE
+
+Create a demo mode with seeded data.
+
+The judges should be able to log in as:
+
+```text
+Farmer Demo
+Buyer Demo
+Logistics Demo
+Admin Demo
+```
+
+Provide demo credentials in the README.
+
+---
+
+# 37. ERROR HANDLING
+
+If an AI service is unavailable:
+
+```text
+fallback to mock
+```
+
+If logistics optimization is unavailable:
+
+```text
+fallback to mock route
+```
+
+The application must never crash simply because an AI model isn't connected.
+
+---
+
+# 38. API DESIGN
+Recommendation: 
+Use FastAPI.
+
+Create clean REST endpoints.
+
+Examples:
+
+```text
+POST /auth/login
+
+GET /farmers/me
+POST /produce
+GET /produce
+
+POST /buyers/requirements
+GET /buyers/requirements
+
+GET /matching/recommendations
+
+POST /offers
+POST /transactions
+
+GET /vehicles
+POST /vehicles
+
+GET /logistics/loads
+POST /logistics/optimize
+
+GET /dashboard/farmer
+GET /dashboard/buyer
+GET /dashboard/logistics
+
+POST /ai/price/predict
+POST /ai/trade/best
+POST /ai/logistics/optimize
+```
+
+Use Pydantic schemas.
+
+
+---
+
+# 39. FRONTEND ↔ BACKEND
+
+The frontend must communicate through APIs.
+
+Do NOT put business calculations in React components.
+
+Business logic belongs in backend services.
+
+---
+
+# 40. LOCAL SETUP
+
+The project must run locally.
+
+
+# 43. FUTURE FEATURES — DO NOT IMPLEMENT NOW
+
+Keep architecture extensible for:
+
+```text
+Voice farmer interface
+IVR
+WhatsApp
+Kannada/Hindi/Telugu/etc.
+Village agents
+
+Demand forecasting
+Advanced spoilage prediction
+Computer vision grading
+IoT temperature monitoring
+Warehouse management
+Hyperlocal delivery
+Digital payments
+Insurance
+Credit
+Crop planning
+```
+
+These are future roadmap items.
+
+---
+
+# 44. FINAL PRODUCT POSITIONING
+
+For the demo/pitch, show a simple before/after comparison to make the core value prop
+visual and immediate:
+
+```text
+Traditional:  Farmer → Mandi → Wholesaler → Retailer → Consumer   (multiple markups)
+AgriFlow:     Farmer → Buyer                                       (one margin)
+```
+
+This is a static comparison card, not a new feature — build it last if time is tight.
+
+The platform should communicate:
+
+> We are not simply connecting farmers with buyers.
+
+Instead:
+
+> We calculate the best agricultural transaction by jointly considering price, quantity, transport cost, freshness and delivery constraints.
+
+Core loop:
+
+```text
+SUPPLY
+   +
+DEMAND
+   +
+LOGISTICS
+   +
+FRESHNESS
+   ↓
+AI BEST TRADE
+```
+
+The primary measurable outcomes shown by the demo should be:
+
+↑ Farmer net realization
+↓ Buyer landed cost
+↓ Transportation cost
+↓ Empty vehicle capacity
+↓ Spoilage
+↑ Vehicle utilization
+
+

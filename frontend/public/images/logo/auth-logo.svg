@@ -1,0 +1,6 @@
+<svg width="231" height="48" viewBox="0 0 231 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect y="8" width="40" height="40" rx="10" fill="#3FB473"/>
+<path d="M20 44C16.5 37 13 33 13 26.5C13 22.5 16 19 20 19C20 19 20 30 20 44Z" fill="white"/>
+<path d="M20 19C23.5 22.5 27 26.5 27 31C27 35.5 23.5 39.5 20 44" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+<text x="52" y="34" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="white">AgriFlow</text>
+</svg>

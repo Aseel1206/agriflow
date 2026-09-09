@@ -1,0 +1,9 @@
+# Original template download — already unpacked into frontend/
+free-nextjs-admin-dashboard-main.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# stray dev server logs
+*.log

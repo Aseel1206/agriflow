@@ -1,0 +1,38 @@
+AI price recommendation
+Model: LightGBM / XGBoost
+Input: crop, market, location, historical prices, arrivals, season, demand, etc.
+Output: recommended price + confidence/range.
+Future market price prediction
+Model: LightGBM
+Later: Temporal Fusion Transformer if you get enough data.
+Output: price forecast for 1/3/7 days.
+Demand forecasting
+Model: LightGBM
+Input: historical demand/orders, crop, location, season, day, weather, festivals, price.
+Output: expected quantity demanded.
+Farmer ↔ Buyer matching
+Model: LightGBM ranking/classification
+Input: price compatibility, quantity, distance, quality, shelf life, delivery time.
+Output: match score/probability.
+
+
+these are the models my ml team is working on.. and the models are not yet confirmed
+
+---
+SCOPE DECISION (for the 3-day hackathon MVP):
+
+Only the AI price recommendation model targets the demo. It plugs into the
+`MockPriceTradeService` / `LightGBMPriceTradeService` swap point defined in idea.txt §9,
+grounded in real Agmarknet/data.gov.in mandi price data as the baseline.
+
+Future market price prediction, demand forecasting, and farmer<->buyer matching are
+explicitly OUT of scope for the MVP demo and are stretch goals only if time permits.
+They must be built against the already-defined contract endpoints so they can be
+plugged in later without changing frontend or business logic:
+
+    POST /ai/price/predict
+    POST /ai/trade/score
+    POST /ai/logistics/optimize
+    POST /ai/freshness/predict
+
+Do not let these become blockers for the hackathon build (see idea.txt §29).
