@@ -15,22 +15,34 @@ FPOs), and the BEST TRADE engine.
 - Google OR-Tools for vehicle routing
 - JWT auth (python-jose + bcrypt)
 
-## Run instantly, no install (SQLite)
+## Fresh clone — fastest path (SQLite, no Postgres/Docker needed)
 
-`.venv` here already has every dependency installed, and `.env` is already pointed at
-a local SQLite file. This is the fastest way to run and demo the app — no Postgres,
-no Docker, nothing to install:
+`.venv`, `.env` and the seeded database are all gitignored (as they should be — they're
+either machine-specific or generated), so a fresh clone needs these four steps once:
 
 ```powershell
 cd backend
-.venv\Scripts\python.exe -m app.seed             # only needed once — agriflow.db already has seed data
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+copy .env.example .env
+.venv\Scripts\python.exe -m app.seed
+```
+
+Then run the API:
+
+```powershell
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-API docs: http://localhost:8000/docs. Demo credentials below.
+API docs: http://localhost:8000/docs. Demo credentials below. On macOS/Linux, use
+`python3 -m venv .venv`, `.venv/bin/python`, and `cp .env.example .env` instead.
 
-This is for local development/demoing only — swap `DATABASE_URL` in `.env` to Postgres
-(see below) before a real deploy, since idea.txt specifies PostgreSQL for production.
+`requirements.txt` includes `lightgbm` (~40MB with its `scipy` dependency) for the
+demand-forecasting model — the rest is lightweight.
+
+This SQLite path is for local development/demoing only — swap `DATABASE_URL` in `.env`
+to Postgres (see below) before a real deploy, since idea.txt specifies PostgreSQL for
+production.
 
 ## Run with Docker + PostgreSQL (production-parity)
 
@@ -50,9 +62,9 @@ API docs: http://localhost:8000/docs
 ## Run locally against PostgreSQL without Docker
 
 For when you want Postgres specifically (matches idea.txt §25/§37 exactly) but still
-don't want Docker. `.venv` here is already set up with all dependencies installed
-(Python 3.14-compatible pins: `psycopg` v3 instead of `psycopg2`, current
-`pydantic`/`sqlalchemy` patch releases — see requirements.txt for exact versions).
+don't want Docker. Uses the same `.venv` from the step above (Python 3.14-compatible
+pins: `psycopg` v3 instead of `psycopg2`, current `pydantic`/`sqlalchemy` patch
+releases — see requirements.txt for exact versions).
 
 **1. Install PostgreSQL** (one-time, needs an elevated/Administrator shell —
 this cannot be done from a non-admin terminal):
@@ -83,13 +95,6 @@ $env:PGPASSWORD = "postgres"
 .venv\Scripts\python.exe -m app.seed
 ```
 
-If you don't have `.venv` yet (e.g. cloned fresh):
-
-```powershell
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
 ## Demo credentials (password: `demo1234`)
 
 | Role      | Email                          |
@@ -105,7 +110,7 @@ Get a token: `POST /auth/login {"email": "...", "password": "demo1234"}`, then s
 ## Architecture notes
 
 - `app/models.py` — every table from idea.txt §25, plus `fpo_profiles` (§11a).
-- `app/services/` — the four core services, each behind a stable interface so a real
+- `app/services/` — the core services, each behind a stable interface so a real
   ML model can replace the rule-based logic later without touching callers or the
   frontend (idea.txt §9, §37):
   - `price_trade_service.py` — `MockPriceTradeService`, seeded from
@@ -115,6 +120,18 @@ Get a token: `POST /auth/login {"email": "...", "password": "demo1234"}`, then s
   - `logistics_service.py` — OR-Tools vehicle routing for shared pickups.
   - `best_trade_service.py` / `aggregation_service.py` — orchestrate the above into
     the BEST TRADE ranking and the dynamic farmer-aggregation (Virtual Supply Lot) flow.
+    `aggregation_service.choose_allocation_order()` does an exhaustive search for small
+    candidate pools to fill an order with the fewest farmers, falling back to a plain
+    nearest-first greedy fill for larger pools.
+  - `demand_forecast_service.py` — the one **genuinely trained ML model** in this app: a
+    LightGBM regressor (748 trees, ~638k historical mandi rows, 2001–2021) forecasting
+    regional market arrivals. Training script + notes live in `/demand_model` at the
+    repo root; the vendored model is `app/data/demand_model.txt`. Read the module
+    docstring before trusting its output — it documents exactly what the number does
+    and doesn't mean, and a real data-availability caveat.
+  - `trust_service.py` — a farmer/buyer reliability score derived from their own
+    completed-vs-cancelled transaction history. No ML — same spirit as the other
+    rule-based services.
 - `app/api/routes/` — one router per domain area, matching the endpoint list in
   idea.txt §38, plus the `/ai/*` contract endpoints from §28 (already wired to the mock
   services so the ML team can swap in trained models behind the same request/response
@@ -127,6 +144,6 @@ Get a token: `POST /auth/login {"email": "...", "password": "demo1234"}`, then s
 - No live payments/escrow — transaction `status` is tracked, no money moves.
 - No PostGIS — distances use haversine on plain lat/lng columns.
 - No Alembic migrations yet — `Base.metadata.create_all()` runs on startup.
-- Only the price/trade model is targeted for the hackathon demo; forecasting/demand/
-  matching models are stretch goals built against the `/ai/*` contract (see
-  `../models_plan.txt`).
+- Price/trade and demand forecasting are both implemented (the latter as a real
+  trained model, not a mock); farmer↔buyer matching-as-ML remains a stretch goal,
+  built against the `/ai/*` contract (see `../models_plan.txt`).
