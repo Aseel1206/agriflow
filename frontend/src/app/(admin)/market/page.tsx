@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import { MandiPrice, MapPoint, SupplyDemandRow } from "@/lib/types";
+import { DemandForecast, MandiPrice, MapPoint, SupplyDemandRow } from "@/lib/types";
 import { useT } from "@/context/LanguageContext";
 import PageHeader from "@/components/agri/PageHeader";
 import ComponentCard from "@/components/common/ComponentCard";
@@ -15,6 +15,7 @@ export default function MarketPage() {
   const [rows, setRows] = useState<SupplyDemandRow[] | null>(null);
   const [points, setPoints] = useState<MapPoint[] | null>(null);
   const [mandiPrices, setMandiPrices] = useState<MandiPrice[] | null>(null);
+  const [forecast, setForecast] = useState<DemandForecast[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
 
@@ -30,6 +31,10 @@ export default function MarketPage() {
     api
       .get<MandiPrice[]>("/market/mandi-prices")
       .then(setMandiPrices)
+      .catch(() => {});
+    api
+      .get<DemandForecast[]>("/market/demand-forecast")
+      .then(setForecast)
       .catch(() => {});
   }, []);
 
@@ -134,6 +139,55 @@ export default function MarketPage() {
               </Table>
             </div>
           </ComponentCard>
+        </div>
+      )}
+
+      {forecast && forecast.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-warning-200 bg-warning-25 p-4 dark:border-warning-500/30 dark:bg-warning-500/5 md:p-6">
+          <h3 className="font-semibold text-gray-800 dark:text-white/90">{t.market.outlookTitle}</h3>
+          <p className="mt-1 mb-4 text-sm text-gray-500 dark:text-gray-400">{t.market.outlookDesc}</p>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="border-b border-gray-100 dark:border-gray-800">
+                <TableRow>
+                  {[t.market.cropCol, t.market.arrivalsCol, t.market.statusCol].map((h) => (
+                    <TableCell
+                      key={h}
+                      isHeader
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                    >
+                      {h}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {forecast.map((f) => (
+                  <TableRow key={f.crop}>
+                    <TableCell className="px-4 py-3 font-medium text-gray-800 dark:text-white/90">{f.crop}</TableCell>
+                    <TableCell className="px-4 py-3 text-gray-600 dark:text-gray-300">
+                      {f.predicted_arrivals_tonnes.toLocaleString()} t
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {f.nearest_festival && f.days_to_nearest_festival <= 14 && (
+                          <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700 dark:bg-brand-500/10 dark:text-brand-400">
+                            {t.market.nearFestivalPrefix}: {f.nearest_festival}
+                          </span>
+                        )}
+                        {!f.crop_recognized && (
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                            {t.market.lowConfidenceLabel}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">{forecast[0].note}</p>
         </div>
       )}
     </div>

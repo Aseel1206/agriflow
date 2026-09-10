@@ -1,6 +1,10 @@
 # Original template download — already unpacked into frontend/
 free-nextjs-admin-dashboard-main.zip
 
+# Reference material for the matching-engine comparison (see conversation
+# history) — not part of the app; kept locally only, too large for the repo.
+Matching Sih.zip
+
 # OS
 .DS_Store
 Thumbs.db

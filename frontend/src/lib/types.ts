@@ -175,6 +175,18 @@ export type SupplyDemandRow = {
   demand_trend_pct: number | null;
 };
 
+export type DemandForecast = {
+  crop: string;
+  state: string;
+  date: string;
+  predicted_arrivals_tonnes: number;
+  is_festival: boolean;
+  nearest_festival: string | null;
+  days_to_nearest_festival: number;
+  crop_recognized: boolean;
+  note: string;
+};
+
 export type MandiPrice = {
   crop: string;
   market: string;

@@ -1,0 +1,22 @@
+File's we have 
+training_dataset.csv	The full dataset, in case you want to retrain or tweak anything
+train_model.py	The training script — rerun anytime with python train_model.py
+demand_model.txt	The trained model itself — use this directly, no retraining needed
+feature_importance.png	Chart showing what drives predictions — good for your slides
+
+Next Steps:-
+1
+Build the inference wrapper for your app
+Write a small script that loads demand_model.txt with lgb.Booster(model_file="demand_model.txt") and calls .predict() on new input rows. This is what your hackathon app will actually call whenever it needs a prediction — no retraining involved.
+2
+Track recent history per crop-state
+For any crop-state your app wants to predict for, you need its lag_1_arrivals, rolling_7_avg, rolling_30_avg, and lag_1_price — i.e. what that crop's demand/price looked like recently. If your app has its own live order/sales data, compute these on the fly; if not, you can seed them from the historical dataset as a reasonable starting point.
+3
+Test predictions end-to-end
+Feed a handful of realistic scenarios through the model (different crops, states, near/far from festivals) and sanity-check the outputs make sense — e.g. onion demand should spike around Diwali.
+4
+Wire it into your hackathon UI
+Decide how this plugs into your farmer-facing feature: a dashboard showing predicted demand for their crop/region, an alert when a festival is coming up, or a chart comparing predicted vs actual over time.
+5
+Prep your demo/slides
+The feature_importance.png chart plus the R²/MAE numbers make a solid, honest results slide. Mention the real data source (Agmarknet, government data) — judges like real data over synthetic.

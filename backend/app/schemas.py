@@ -358,6 +358,24 @@ class AIFreshnessRequest(BaseModel):
     sale_price_per_kg: float
 
 
+class AIDemandPredictRequest(BaseModel):
+    crop: str
+    state: str = "Karnataka"
+    target_date: date | None = None
+
+
+class DemandForecastOut(BaseModel):
+    crop: str
+    state: str
+    date: date
+    predicted_arrivals_tonnes: float
+    is_festival: bool
+    nearest_festival: str | None
+    days_to_nearest_festival: int
+    crop_recognized: bool
+    note: str
+
+
 class AITradeBestRequest(BaseModel):
     sale_price_per_kg: float
     transport_cost_per_kg: float

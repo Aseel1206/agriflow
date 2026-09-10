@@ -16,7 +16,8 @@ from app.models import (
     ProduceListing,
     RequirementStatus,
 )
-from app.schemas import MandiPriceOut, MapPoint, SupplyDemandRow
+from app.schemas import DemandForecastOut, MandiPriceOut, MapPoint, SupplyDemandRow
+from app.services.demand_forecast_service import predict_arrivals
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -83,6 +84,17 @@ def mandi_prices(db: Session = Depends(get_db)):
     baked invisibly into AI price recommendations.
     """
     return db.query(MarketPrice).order_by(MarketPrice.crop).all()
+
+
+@router.get("/demand-forecast", response_model=list[DemandForecastOut])
+def demand_forecast(db: Session = Depends(get_db)):
+    """Regional market-arrival forecast per seed crop, from a real trained
+    LightGBM model — see app/services/demand_forecast_service.py for what
+    this number does and doesn't mean. Deliberately a separate endpoint
+    from /supply-demand: that one is live platform data, this one is a
+    forecast, and the two should never be visually conflated in the UI.
+    """
+    return [predict_arrivals(db, crop=crop) for crop in CROPS]
 
 
 @router.get("/map", response_model=list[MapPoint])

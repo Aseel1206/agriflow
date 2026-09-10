@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import BuyerRequirement, ProduceListing, RequirementStatus
-from app.services.aggregation_service import find_candidate_listings
+from app.services.aggregation_service import choose_allocation_order, find_candidate_listings
 from app.services.freshness_service import freshness_service
 from app.services.geo import estimate_transport_hours, haversine_km
 from app.services.price_trade_service import (
@@ -141,12 +141,16 @@ def build_procurement_plan(db: Session, requirement: BuyerRequirement) -> dict |
     if not candidates:
         return None
 
+    ordered = choose_allocation_order(
+        candidates, requirement.remaining_quantity_kg, requirement.delivery_lat, requirement.delivery_lng
+    )
+
     remaining_needed = requirement.remaining_quantity_kg
     contributions = []
     product_cost = 0.0
     max_distance = 0.0
 
-    for listing in candidates:
+    for listing in ordered:
         if remaining_needed <= 0:
             break
         take = min(listing.remaining_quantity_kg, remaining_needed)

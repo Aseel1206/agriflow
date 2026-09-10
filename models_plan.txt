@@ -25,10 +25,10 @@ Only the AI price recommendation model targets the demo. It plugs into the
 `MockPriceTradeService` / `LightGBMPriceTradeService` swap point defined in idea.txt §9,
 grounded in real Agmarknet/data.gov.in mandi price data as the baseline.
 
-Future market price prediction, demand forecasting, and farmer<->buyer matching are
-explicitly OUT of scope for the MVP demo and are stretch goals only if time permits.
-They must be built against the already-defined contract endpoints so they can be
-plugged in later without changing frontend or business logic:
+Future market price prediction and farmer<->buyer matching remain OUT of scope for
+the MVP demo and are stretch goals only if time permits. They must be built against
+the already-defined contract endpoints so they can be plugged in later without
+changing frontend or business logic:
 
     POST /ai/price/predict
     POST /ai/trade/score
@@ -36,3 +36,16 @@ plugged in later without changing frontend or business logic:
     POST /ai/freshness/predict
 
 Do not let these become blockers for the hackathon build (see idea.txt §29).
+
+UPDATE — demand forecasting is now IN scope, ahead of schedule: a real trained
+LightGBM model (regional mandi arrivals, 748 trees, ~638k historical rows spanning
+2001-2021) was contributed and integrated as its own contract endpoint,
+POST /ai/demand/predict (plus a convenience GET /market/demand-forecast for all seed
+crops at once). This is a genuine trained model, not a mock — see
+backend/app/services/demand_forecast_service.py for what it actually predicts
+(regional arrivals, a market-activity proxy, NOT a literal count of AgriFlow buyer
+orders) and its data-availability caveats (no real recent-arrivals feed to seed its
+most important feature, so it's seeded from this platform's own current listing
+volume instead; two of five seed crops — Banana, Cabbage — aren't in its training
+vocabulary). Surfaced on the Market page as a clearly separate "Regional Market
+Outlook (Forecast)" section — never merged with the live Supply vs. Demand numbers.

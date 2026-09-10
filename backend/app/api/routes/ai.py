@@ -10,15 +10,19 @@ fallback since that IS the current implementation).
 
 from datetime import date
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
+from app.db.session import get_db
 from app.schemas import (
+    AIDemandPredictRequest,
     AIFreshnessRequest,
     AILogisticsOptimizeRequest,
     AIPricePredictRequest,
     AITradeBestRequest,
     AITradeScoreRequest,
 )
+from app.services.demand_forecast_service import predict_arrivals
 from app.services.freshness_service import freshness_service
 from app.services.logistics_service import logistics_service
 from app.services.price_trade_service import price_trade_service
@@ -98,3 +102,12 @@ def predict_freshness(payload: AIFreshnessRequest):
         sale_price_per_kg=payload.sale_price_per_kg,
     )
     return {**result, "model": "rule-based-freshness-v1"}
+
+
+@router.post("/demand/predict")
+def predict_demand(payload: AIDemandPredictRequest, db: Session = Depends(get_db)):
+    """The one genuinely-trained-ML endpoint in this router — see
+    app/services/demand_forecast_service.py for the honesty caveats on
+    what this number does and doesn't mean.
+    """
+    return predict_arrivals(db, crop=payload.crop, state=payload.state, target_date=payload.target_date)

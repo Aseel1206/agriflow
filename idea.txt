@@ -146,9 +146,21 @@ so an ML model can replace it later.
 
 # 6. DEMAND
 
-Do NOT build a demand forecasting ML model.
+Do NOT build a demand forecasting ML model from scratch for the MVP.
 
-Demand for the MVP comes directly from buyer requirements.
+UPDATE: a real trained LightGBM model (regional mandi arrivals forecast,
+748 trees, ~638k historical rows 2001-2021) was contributed separately —
+see /demand_model at the repo root for training notes, and
+backend/app/services/demand_forecast_service.py for the integration and
+its honesty caveats (it predicts arrivals as a market-activity proxy, not
+literal buyer demand, and two of our five seed crops aren't in its
+training vocabulary). It's wired in as a clearly-separate "Regional Market
+Outlook (Forecast)" section on the Market page — GET /market/demand-forecast
+and POST /ai/demand/predict — and must never be visually merged with the
+live numbers below, which remain untouched.
+
+Demand for the MVP's live Supply vs. Demand numbers still comes directly
+from buyer requirements, unrelated to the forecast above.
 
 Example:
 
