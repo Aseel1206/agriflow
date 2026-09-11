@@ -49,3 +49,17 @@ most important feature, so it's seeded from this platform's own current listing
 volume instead; two of five seed crops — Banana, Cabbage — aren't in its training
 vocabulary). Surfaced on the Market page as a clearly separate "Regional Market
 Outlook (Forecast)" section — never merged with the live Supply vs. Demand numbers.
+
+UPDATE — the AI price recommendation model is now backed by a real trained model
+too, closing out both item 1 and (partially) item 5 above: a second LightGBM
+regressor (162 trees, same ~638k-row mandi dataset) forecasting *next-day* mandi
+price per crop. It doesn't replace the platform's own quality-grade/farmer-expectation
+logic in `LightGBMPriceTradeService.predict_price()` — it replaces that logic's
+baseline, which used to be a static mandi-snapshot average, with this trained
+forecast blended 70/30 with today's price. See
+backend/app/services/price_forecast_model.py for the model wrapper and its honesty
+caveats (same data-availability caveats as the demand model — no live arrivals/price
+history feed, so those features are seeded from platform data — and the same
+8-crop training vocabulary gap for Banana/Cabbage, surfaced via lower confidence
+rather than hidden). `MockPriceTradeService` (the old static-snapshot-only logic)
+remains in price_trade_service.py as the fallback when no db session is available.

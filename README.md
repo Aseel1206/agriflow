@@ -54,6 +54,10 @@ http://localhost:8000/docs.
   ~638k historical mandi records) forecasting regional arrivals, clearly separated
   from the platform's live supply/demand data. See `backend/README.md` and
   `/demand_model` for how it was trained and its honesty caveats.
+- **AI price recommendation** — backed by a second trained LightGBM model (162
+  trees, same mandi dataset) forecasting tomorrow's price, blended with the
+  platform's own quality-grade logic rather than a static price snapshot. See
+  `/price_modal` for training notes.
 - **Shared logistics** — Google OR-Tools solves a real vehicle-routing problem for
   multi-farmer pickups, not a fake heuristic.
 - **6 languages + accessibility** — every screen (not just the landing page) works
@@ -67,3 +71,4 @@ http://localhost:8000/docs.
 - `models_plan.txt` — the ML scope decisions (what's a real trained model vs.
   rule-based logic, and why).
 - `demand_model/` — training script and notes for the demand-forecasting model.
+- `price_modal/` — training script and notes for the next-day price-forecasting model.

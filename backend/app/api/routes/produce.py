@@ -28,6 +28,7 @@ def create_produce(
         crop=payload.crop,
         quality_grade=payload.quality_grade,
         farmer_expected_price=payload.expected_price,
+        db=db,
     )
 
     listing = ProduceListing(
@@ -96,6 +97,7 @@ def price_recommendation(listing_id: uuid.UUID, db: Session = Depends(get_db)):
         crop=listing.crop,
         quality_grade=listing.quality_grade,
         farmer_expected_price=listing.expected_price,
+        db=db,
     )
     return PriceRecommendationOut(
         expected_price=listing.expected_price,

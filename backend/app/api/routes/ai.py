@@ -31,18 +31,24 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 @router.post("/price/predict")
-def predict_price(payload: AIPricePredictRequest):
+def predict_price(payload: AIPricePredictRequest, db: Session = Depends(get_db)):
+    """Backed by LightGBMPriceTradeService — a real trained next-day price
+    forecast blended with the platform's quality-grade logic. See
+    app/services/price_forecast_model.py for the honesty caveats.
+    """
     prediction = price_trade_service.predict_price(
         crop=payload.crop,
         quality_grade=payload.quality_grade,
         farmer_expected_price=payload.farmer_expected_price,
+        db=db,
     )
     return {
         "recommended_price": prediction.recommended_price,
         "range_low": prediction.range_low,
         "range_high": prediction.range_high,
         "confidence": prediction.confidence,
-        "model": "mock-price-trade-v1",
+        "baseline_source": prediction.baseline_source,
+        "model": "lightgbm-price-v1",
     }
 
 

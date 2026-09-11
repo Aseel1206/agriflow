@@ -113,9 +113,17 @@ Get a token: `POST /auth/login {"email": "...", "password": "demo1234"}`, then s
 - `app/services/` — the core services, each behind a stable interface so a real
   ML model can replace the rule-based logic later without touching callers or the
   frontend (idea.txt §9, §37):
-  - `price_trade_service.py` — `MockPriceTradeService`, seeded from
-    `app/data/mandi_prices.py` (static Agmarknet/data.gov.in-derived snapshot —
-    **refresh before a real demo**, see the module docstring for the source and caveats).
+  - `price_trade_service.py` — `LightGBMPriceTradeService`, which blends a real
+    trained next-day price forecast (`price_forecast_model.py`) with the platform's
+    quality-grade/farmer-expectation logic. Falls back to `MockPriceTradeService`'s
+    static Agmarknet/data.gov.in-derived snapshot (`app/data/mandi_prices.py` —
+    **refresh before a real demo**) whenever no db session is available.
+  - `price_forecast_model.py` — the second genuinely trained ML model in this app: a
+    LightGBM regressor (162 trees, same ~638k-row mandi dataset as the demand model)
+    forecasting tomorrow's mandi price. Training script + notes live in `/price_modal`
+    at the repo root; the vendored model is `app/data/price_model.txt`. Same
+    data-availability caveats as `demand_forecast_service.py` — read its docstring
+    before trusting its output.
   - `freshness_service.py` — rule-based shelf life / spoilage, per `app/data/shelf_life.py`.
   - `logistics_service.py` — OR-Tools vehicle routing for shared pickups.
   - `best_trade_service.py` / `aggregation_service.py` — orchestrate the above into
@@ -123,7 +131,7 @@ Get a token: `POST /auth/login {"email": "...", "password": "demo1234"}`, then s
     `aggregation_service.choose_allocation_order()` does an exhaustive search for small
     candidate pools to fill an order with the fewest farmers, falling back to a plain
     nearest-first greedy fill for larger pools.
-  - `demand_forecast_service.py` — the one **genuinely trained ML model** in this app: a
+  - `demand_forecast_service.py` — the first **genuinely trained ML model** in this app: a
     LightGBM regressor (748 trees, ~638k historical mandi rows, 2001–2021) forecasting
     regional market arrivals. Training script + notes live in `/demand_model` at the
     repo root; the vendored model is `app/data/demand_model.txt`. Read the module
@@ -144,6 +152,6 @@ Get a token: `POST /auth/login {"email": "...", "password": "demo1234"}`, then s
 - No live payments/escrow — transaction `status` is tracked, no money moves.
 - No PostGIS — distances use haversine on plain lat/lng columns.
 - No Alembic migrations yet — `Base.metadata.create_all()` runs on startup.
-- Price/trade and demand forecasting are both implemented (the latter as a real
-  trained model, not a mock); farmer↔buyer matching-as-ML remains a stretch goal,
-  built against the `/ai/*` contract (see `../models_plan.txt`).
+- Price/trade and demand forecasting are both implemented, and both now backed by
+  real trained models rather than mocks; farmer↔buyer matching-as-ML remains a
+  stretch goal, built against the `/ai/*` contract (see `../models_plan.txt`).
